@@ -1,0 +1,236 @@
+---
+title: "gdelt_asd_application"
+author: "Franco Caramia"
+date: "2023-03-26"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: inline
+---
+
+## Introduction
+
+At www.gdeltproject.org, you’ll find the Global Database of Events, Location and Tone. We’d like you to take a look at the data from the week of 9-16 June 2018 and tell us something that the Australian Government might find interesting about it.
+
+```{r, include=F}
+rm(list = ls())
+gc(full = T)
+library(gdeltr2)
+library(dplyr)
+library(ggplot2)
+
+# Download data (the month of June)
+
+mydate = as.Date("2018-06-30")
+
+dates_to_get = NULL
+for (i in 0:30){
+  new_date = gsub("-","",mydate - i)
+  dates_to_get = c(dates_to_get,  new_date)
+}
+event_data  = get_data_gdelt_periods_event (periods = dates_to_get)
+
+## Filter out of date events 
+event_data = event_data%>% filter(dateEvent>="2018-06-01")
+
+
+
+```
+
+## Checking basic event data
+
+**Events Per Day**
+```{r}
+## Check Events per day
+
+event_data %>% filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% ggplot(aes(x=dateEvent)) + geom_histogram()
+event_data %>% ggplot(aes(x=dateEvent)) + geom_histogram()
+
+
+```
+
+At first seems like there is a spike in number of events, however, this is just the weekend effect. 
+
+**Check Scores**
+```{r}
+## Check Events per day
+
+event_data %>% filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% ggplot(aes(x=scoreGoldstein)) + geom_density() + facet_wrap(~dateEvent)
+
+event_data %>% filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% ggplot(aes(x=avgTone)) + geom_density() + facet_wrap(~dateEvent)
+
+event_data$dateEventFactor = as.factor(event_data$dateEvent)
+event_data %>% filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% ggplot(aes(x=dateEventFactor,y=scoreGoldstein)) + geom_boxplot()
+
+event_data %>% filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% ggplot(aes(x=dateEventFactor,y=avgTone)) + geom_boxplot()
+
+
+```
+Seems like looking at total events, there was not much change
+
+
+**Events related to Australia**
+
+
+```{r}
+
+event_data %>% 
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS')  %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% ggplot(aes(x=dateEvent)) + geom_histogram()
+
+event_data %>% 
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS')  %>%
+  ggplot(aes(x=dateEvent)) + geom_histogram()
+
+
+event_data %>%
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=scoreGoldstein)) + geom_density() + facet_wrap(~dateEvent)
+
+event_data %>%
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=avgTone)) + geom_density() + facet_wrap(~dateEvent)
+
+
+event_data %>% 
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=dateEventFactor,y=scoreGoldstein)) + geom_boxplot()
+
+event_data %>% 
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=dateEventFactor,y=avgTone)) + geom_boxplot()
+
+
+event_data %>%
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=countMentions)) + geom_density() + facet_wrap(~dateEvent)
+
+
+
+```
+
+Checking the distributions in the data. 
+
+**Break down by event description**
+
+```{r}
+
+event_data %>%
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(y=scoreGoldstein,x=dateEventFactor)) + geom_boxplot() + facet_wrap(~nameQuad)
+
+event_data %>%
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS') %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(y=avgTone,x=dateEventFactor)) + geom_boxplot() + facet_wrap(~nameQuad)
+
+
+
+```
+Cooperations are usually positive and conflicts usually negative in both Goldstein and avgTone 
+
+
+**Event type frequencies**
+
+```{r}
+
+event_data %>% 
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=dateEvent)) + geom_histogram() + facet_wrap(~nameQuad)
+
+event_data %>% 
+  ggplot(aes(x=dateEvent)) + geom_histogram()+ facet_wrap(~nameQuad)
+
+
+event_data %>% 
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS')  %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>% 
+  ggplot(aes(x=dateEvent)) + geom_histogram() + facet_wrap(~nameQuad)
+
+event_data %>% 
+  filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS')  %>%
+  ggplot(aes(x=dateEvent)) + geom_histogram()+ facet_wrap(~nameQuad)
+
+
+```
+
+
+**Are metrics correlated? **
+
+```{r}
+
+library(corrplot)
+library(tidyverse)
+
+corr_mat = event_data %>% select(avgTone,scoreGoldstein,countMentions,countSources,countArticles) 
+corrplot.mixed(cor(corr_mat,use="complete.obs"))
+
+```
+
+We have learned so far that the number of events and the distribution of scores (Goldstein,AvgTone) doesnt change much. 
+
+avgTone and Goldstein are weakly correlated, so it might be better to separate them. 
+
+Mentions, Sources and Articles are highly correlated, so we can use only one
+
+Next:
+
+Can we find events that have mix of "out of ordinary" (-2>zscores>2) in all of Goldstein, avgTone, mentions/sources/articles?
+
+The hypothesis is that if an event has very high/low impact score and high/low frequency, it should be important. 
+
+Let's do this for the world and also for events related to Australia. 
+
+**Calculate Zscores and search for events**
+```{r}
+
+tone_important_events = event_data %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>%
+  mutate(z_score = (avgTone-mean(avgTone,na.rm = T))/sd(avgTone,na.rm=T)) %>%
+  filter(z_score>=2|z_score<=-2) %>% 
+  pull(idGlobalEvent)
+
+
+goldstein_important_events = event_data %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>%
+  mutate(z_score = (scoreGoldstein-mean(scoreGoldstein,na.rm = T))/sd(scoreGoldstein,na.rm=T)) %>%
+  filter(z_score>=2|z_score<=2) %>%
+  pull(idGlobalEvent)
+
+## Only highly mentioned events
+mentions_important_events = event_data %>%
+  filter(dateEvent>='2018-06-09',dateEvent<="2018-06-16") %>%
+  mutate(z_score = (countMentions-mean(countMentions,na.rm = T))/sd(countMentions,na.rm=T)) %>%
+  filter(z_score>=2) %>%
+  pull(idGlobalEvent)
+
+
+very_important = intersect(tone_important_events,goldstein_important_events)
+very_important = intersect(very_important,mentions_important_events)
+
+# 518 events are either highly positive/negative and high number of mentions 
+
+# Any mention Australia? 
+
+important_event_data = event_data %>% filter(idGlobalEvent%in%very_important)
+
+important_event_data_au = important_event_data %>%
+ filter(idCountryActor1=='AS'|idCountryActor2=='AS'|idCountryAction=='AS')  
+
+# 6 events are related to Australia
+
+```
+
+
+Found 518 events with a highly positive or negative score and high following (mentions)
+6 them possibly related to Australia 
+However, some links are not working and one article is unrelated to Australia due to a victim named "Sydney".
+
+I concluded that the addition of the Jama’at Mujahideen Bangladesh terrorist group by the Department of Home Affairs 
+to the Australian terrorist group list might be of great interest to the ADF. 
+
